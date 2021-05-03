@@ -176,7 +176,6 @@ class DatabaseManager:
                 vals_concat += ", "
 
         keyjoin = ", ".join( self.entities[c_name].args_dict.keys() )
-        #sql = f"INSERT INTO {c_name} ({keyjoin}) VALUES ({q_marks} );"
         sql = f"INSERT INTO {c_name} ({keyjoin}) VALUES ({vals_concat})"
         #print(sql)
         #print(vals)
@@ -184,12 +183,32 @@ class DatabaseManager:
         await self.conn.commit()
 
     async def build_and_insert(self, tablename, **kargs):
-        '''Insert instance into database right after instantiation, then returns it.'''
+        '''Insert instance into database right after instantiation, then returns it'''
         obj = self.build(tablename, **kargs)
         await self.insert(obj)
         return obj
 
     ### UPDATE ###
+
+    async def update(self, Obj):
+        '''Update a database instance (single row)'''
+        c_name = Obj.__class__.__name__
+
+        pk_list = []
+        for pk in Obj.__class__._primary_key:
+            pk_list.append(f"{pk}={getattr(Obj, pk)}")
+        cond_string = " AND ".join(pk_list)        
+
+        up_list = []
+        for attribute in Obj.__class__._attribute_types.keys():
+            if attribute not in Obj.__class__._primary_key:
+                up_list.append(f"{attribute}={getattr(Obj, attribute)}")
+        set_string = ", ".join(up_list)
+
+        sql = f"UPDATE {c_name} SET {set_string} WHERE {cond_string}"
+        #print(sql)
+        await self.conn.execute(sql)
+        await self.conn.commit()
 
     ### SELECT ###
 
@@ -221,6 +240,22 @@ class DatabaseManager:
             result.append(self.build(tablename, **arg_dict))
 
         return result
+
+    async def count(self, tablename, **kargs):
+        '''Returns the count of rows from the database that match the passed in conditions, if any'''
+        sql = f"SELECT count(*) FROM {tablename}"
+        if kargs:
+            conditions = []
+            for key, val in kargs.items():
+                if isinstance(val, str):
+                    conditions.append(f"{key}=\'{val}\'")
+                else:
+                    conditions.append(f"{key}={val}")
+            joined_conditions = " AND ".join(conditions)
+            sql += f" WHERE {joined_conditions}"
+        count_list = await self.conn.execute_fetchall(sql)
+
+        return count_list[0][0]
 
     ### DELETE ### (?)
 

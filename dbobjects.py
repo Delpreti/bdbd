@@ -46,3 +46,16 @@ class Anuncio:
         self.prod_price = kargs["prod_price"]
         self.time_catch = kargs["time_catch"]
 
+class Meta:
+
+    _attribute_types = {
+        "metakey":"INT", "range_start":"INT", "range_end":"INT"
+    }
+
+    _primary_key = ["metakey"]
+
+    def __init__(self, **kargs):
+        self.metakey = kargs["metakey"]
+        self.range_start = kargs["range_start"]
+        self.range_end = kargs["range_end"]
+

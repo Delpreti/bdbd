@@ -4,6 +4,7 @@ Entity class to be used within formulite
 
 from importlib import util
 import sys
+import os
 
 def load_module(module_name, module_path, piece=None):
     '''Function to import modules dinamically'''

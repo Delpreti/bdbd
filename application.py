@@ -18,7 +18,20 @@ async def initialize(manager):
     manager.set_foreign_key("Anuncio", "l_nick", "Loja")
     manager.set_foreign_key("Anuncio", "prod_id", "Produto")
 
+    manager.set_entity("Meta", metakey="INT", range_start="INT", range_end="INT")
+    manager.set_primary_key("Meta", "metakey")
+
     await manager.create_tables()
+
+async def init_meta(manager):
+    # initialize the meta table
+    meta_dict = {}
+
+    meta_dict["metakey"] = 1
+    meta_dict["range_start"] = 161000
+    meta_dict["range_end"] = meta_dict["range_start"] + 1
+
+    await manager.build_and_insert("Meta", **meta_dict)
 
 async def scrap(manager, pid):
 
@@ -74,9 +87,19 @@ async def scrap(manager, pid):
             await manager.build_and_insert("Anuncio", **anun_dict)
         await manager.build_and_insert("Produto", **prod_dict)
 
-async def scrap_all(manager):
-    for i in range(162000, 162002):
+async def scrap_some(manager, amount):
+
+    meta_rows = await manager.select_from("Meta")
+    if not meta_rows:
+        return
+    meta_object = meta_rows[0]
+
+    for i in range(meta_object.range_end, meta_object.range_end + amount):
         await scrap(manager, i)
+
+    meta_object.range_end += amount
+
+    await manager.update(meta_object)
 
 async def main():
 
@@ -84,11 +107,18 @@ async def main():
 
     if not manager.loaded():
         await initialize(manager)
+        await init_meta(manager)
 
-    await scrap_all(manager)
+    n = int( input("Quantos elementos deseja pesquisar: ") )
+    before = await manager.count("Produto")
+    await scrap_some(manager, n)
+    after = await manager.count("Produto")
+    print(f"{n} itens pesquisados, {after - before} novos itens foram encontrados.")
 
-    produtos = await manager.select_from("Produto")
-    print(len(produtos))
+    #produtos = await manager.select_from("Produto")
+    #print(len(produtos))
+
+    # print( await manager.count("Produto") )
 
     await manager.close()
 
