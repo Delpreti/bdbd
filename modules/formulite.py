@@ -87,7 +87,6 @@ class DatabaseManager:
         '''appends the given attributes to the given entity primary key list'''
         for att in attrs:
             self.entities[entity].primary_key.append(att)
-            
 
     def set_primary_key(self, entity, *attrs):
         ''' makes the given attributes primary key for the given entity'''
@@ -100,7 +99,7 @@ class DatabaseManager:
         foreign keys should only be set after primary keys are set
         '''
         self.entities[entity].foreign_key[attrib] = ref_entity
-
+        
     def set_clear(self):
         '''Destroy the database objects file, if it exists.'''
         if os.path.exists(self.objects_file):
@@ -232,6 +231,29 @@ class DatabaseManager:
                     conditions.append(f"{key}={val}")
             joined_conditions = " AND ".join(conditions)
             sql += f" WHERE {joined_conditions}"
+        rows = await self.conn.execute_fetchall(sql)
+        
+        result = []
+        for row in rows:
+            arg_dict = dict( zip(self.entities[tablename].args_dict.keys(), row) )
+            result.append(self.build(tablename, **arg_dict))
+
+        return result
+
+    async def select_ordered(self, tablename, order_by=None, **kargs):
+        '''Returns a list of objects from the database that match the passed in conditions, if any'''
+        sql = f"SELECT * FROM {tablename}"
+        if kargs:
+            conditions = []
+            for key, val in kargs.items():
+                if isinstance(val, str):
+                    conditions.append(f"{key}=\'{val}\'")
+                else:
+                    conditions.append(f"{key}={val}")
+            joined_conditions = " AND ".join(conditions)
+            sql += f" WHERE {joined_conditions}"
+        if order_by:
+            sql += f" ORDER BY {order_by}"
         rows = await self.conn.execute_fetchall(sql)
         
         result = []

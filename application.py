@@ -3,6 +3,7 @@ import asyncio
 from modules.formulite import formulite
 from modules.mySoup import seed
 import requests
+import re
 
 async def initialize(manager):
     manager.set_clear()
@@ -101,6 +102,13 @@ async def scrap_some(manager, amount):
 
     await manager.update(meta_object)
 
+def get_price(anuncio_obj):
+    encontro = re.search("R\$ (\d+,\d+)", anuncio_obj.prod_price)
+    if encontro:
+        return float( encontro.group(1).replace(",", ".") )
+    else:
+        return None
+
 async def main():
 
     manager = await formulite.manager()
@@ -109,16 +117,43 @@ async def main():
         await initialize(manager)
         await init_meta(manager)
 
-    n = int( input("Quantos elementos deseja pesquisar: ") )
-    before = await manager.count("Produto")
-    await scrap_some(manager, n)
-    after = await manager.count("Produto")
-    print(f"{n} itens pesquisados, {after - before} novos itens foram encontrados.")
-
-    #produtos = await manager.select_from("Produto")
-    #print(len(produtos))
-
-    # print( await manager.count("Produto") )
+    while True:
+        opcao = int( input("Insira um número:\n1 - Pesquisar itens da web\n2 - Acessar BD\n3 - Sair\n") )
+        if opcao == 3:
+            print("Até mais")
+            break
+        if opcao == 1:
+            n = int( input("Quantos elementos deseja pesquisar: ") )
+            print("Aguarde um momento...")
+            before = await manager.count("Produto")
+            await scrap_some(manager, n)
+            after = await manager.count("Produto")
+            print(f"{n} itens pesquisados, {after - before} novos itens foram encontrados.")
+        if opcao == 2:
+            info = int( input("Selecione a informação desejada:\n1 - Quantidade de elementos no banco\n2 - Produto mais barato\n3 - Lojas localizadas no Ed. Central\n") )
+            if info == 1:
+                num_produtos = await manager.count("Produto")
+                num_lojas = await manager.count("Loja")
+                num_anuncios = await manager.count("Anuncio")
+                print(f"{num_produtos} produtos, {num_lojas} lojas e {num_anuncios} anúncios")
+            if info == 2:
+                anuncios = await manager.select_from("Anuncio")
+                least = anuncios[0]
+                for anuncio in anuncios:
+                    if get_price(anuncio) and get_price(least):
+                        if get_price(anuncio) < get_price(least):
+                            least = anuncio
+                prod = await manager.select_from("Produto", prod_id=least.prod_id)
+                store = await manager.select_from("Loja", l_nick=least.l_nick)
+                print(f"O produto produto mais barato é o(a) {prod[0].prod_name} vendido a {least.prod_price} pela loja {store[0].l_name}.")
+            if info == 3:
+                lojas = await manager.select_from("Loja")
+                l_central = []
+                for l in lojas:
+                    verif = re.search("Av[\.]?(enida)? Rio Branco[\,]? 156", l.l_address)
+                    if verif:
+                        l_central.append(verif)
+                print(f"De {len(lojas)} lojas, {len(l_central)} estão localizadas no Edifício Central.")
 
     await manager.close()
 
