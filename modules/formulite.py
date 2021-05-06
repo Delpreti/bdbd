@@ -3,9 +3,6 @@ FORMUlite provides a "simple" ORM to perform asynchronous connection within an s
 currently under development.
 
 Current Version 0.4
-Dependencies: aiosqlite, async-property
-
-This module has been completely rewritten in order to remove the dependency on pydantic.
 '''
 
 import aiosqlite
@@ -278,6 +275,3 @@ class DatabaseManager:
         count_list = await self.conn.execute_fetchall(sql)
 
         return count_list[0][0]
-
-    ### DELETE ### (?)
-

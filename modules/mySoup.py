@@ -8,7 +8,7 @@ from mySoup import seed
 # First you want to build the syntax tree by calling:
 tree_list = seed.build(filename)
 
-# Then, you might want to retrieve objects/variables by accessing specific nodes in the tree.
+# Then, you might want to retrieve objects/variables by accessing specific nodes in the tree (using provided find methods)
 
 """
 
@@ -32,7 +32,7 @@ class seed:
     Also, this class is a Tree factory, hence its name
     """
 
-    @staticmethod # It would look better if this was a class property
+    @staticmethod
     def anything():
         """
         Returns an Anything instance
