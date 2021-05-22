@@ -1,11 +1,12 @@
 import asyncio
 from modules.formulite import formulite
+from modules.formuliteutils import utils as f_utils
 from modules.mySoup import seed
 import requests
 import re
 
 async def initialize(manager):
-    manager.set_clear()
+    manager.set_clear_all()
 
     manager.set_entity("Produto", prod_id="INT", prod_name="TEXT", prod_spec="TEXT")
     manager.set_primary_key("Produto", "prod_id")
@@ -83,7 +84,7 @@ async def scrap(manager, pid):
 
 async def scrap_some(manager, amount):
 
-    meta_rows = await manager.select_from("Meta")
+    meta_rows = await manager.select_all_from("Meta")
     if not meta_rows:
         return
     meta_object = meta_rows[0]
@@ -123,30 +124,37 @@ async def main():
             after = await manager.count("Produto")
             print(f"{n} itens pesquisados, {after - before} novos itens foram encontrados.")
         if opcao == 2:
-            info = int( input("Selecione a informação desejada:\n1 - Quantidade de elementos no banco\n2 - Produto mais barato\n3 - Lojas localizadas no Ed. Central\n") )
+            info = int( input("Selecione a informação desejada:\n1 - Quantidade de elementos no banco\n2 - Produto mais barato\n3 - Lojas localizadas no Ed. Central\n4 - Lojas que realizam delivery\n") )
             if info == 1:
                 num_produtos = await manager.count("Produto")
                 num_lojas = await manager.count("Loja")
                 num_anuncios = await manager.count("Anuncio")
                 print(f"{num_produtos} produtos, {num_lojas} lojas e {num_anuncios} anúncios")
             if info == 2:
-                anuncios = await manager.select_from("Anuncio")
-                least = anuncios[0]
-                for anuncio in anuncios:
-                    if get_price(anuncio) and get_price(least):
-                        if get_price(anuncio) < get_price(least):
-                            least = anuncio
-                prod = await manager.select_from("Produto", prod_id=least.prod_id)
-                store = await manager.select_from("Loja", l_nick=least.l_nick)
-                print(f"O produto produto mais barato é o(a) {prod[0].prod_name} vendido a {least.prod_price} pela loja {store[0].l_name}.")
+                anuncios = await manager.select_all_from("Anuncio")
+                if not anuncios:
+                    print("O banco está vazio!")
+                else:
+                    least = anuncios[0]
+                    for anuncio in anuncios:
+                        if get_price(anuncio) and get_price(least):
+                            if get_price(anuncio) < get_price(least):
+                                least = anuncio
+                    prod = await manager.select_all_from("Produto", f_utils.where(prod_id=least.prod_id))
+                    store = await manager.select_all_from("Loja", f_utils.where(l_nick=least.l_nick))
+                    print(f"O produto produto mais barato é o(a) {prod[0].prod_name} vendido a {least.prod_price} pela loja {store[0].l_name}.")
             if info == 3:
-                lojas = await manager.select_from("Loja")
+                lojas = await manager.select_all_from("Loja")
                 l_central = []
                 for l in lojas:
                     verif = re.search("Av[\.]?(enida)? Rio Branco[\,]? 156", l.l_address)
                     if verif:
                         l_central.append(verif)
                 print(f"De {len(lojas)} lojas, {len(l_central)} estão localizadas no Edifício Central.")
+            if info == 4:
+                lojas_total = await manager.select_all_from("Loja")
+                lojas_delivery = await manager.select_all_from("Loja", f_utils.where(l_delivery=1))
+                print(f"De {len(lojas_total)} lojas, {len(lojas_delivery)} fazem delivery.")
 
     await manager.close()
 

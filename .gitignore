@@ -2,5 +2,6 @@ __pycache__/
 *.pyc[cod]
 *$py.class
 support files/
+resources/
 database.db
 bdbd.zip
